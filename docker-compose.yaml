@@ -5,6 +5,6 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: post_pastbin_db
+      POSTGRES_DB: users_pastbin_db
     ports:
-      - "5433:5432"
+      - "5432:5432"

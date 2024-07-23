@@ -5,7 +5,10 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/maestro-milagro/Post_Service_PB/internal/config"
 	"github.com/maestro-milagro/Post_Service_PB/internal/http-server/handlers/post"
+	"github.com/maestro-milagro/Post_Service_PB/internal/http-server/handlers/subscribe"
 	"github.com/maestro-milagro/Post_Service_PB/internal/lib/sl"
+	"github.com/maestro-milagro/Post_Service_PB/internal/service"
+	"github.com/maestro-milagro/Post_Service_PB/internal/service/aws"
 	"log/slog"
 	"net/http"
 	"os"
@@ -58,11 +61,15 @@ func main() {
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.URLFormat)
 
-	_ = storage
+	servicePB := service.New(log, storage, storage)
+
+	awsService := aws.New(log)
 
 	// TODO: Метод на подписку
+	router.Post("/subscribe", subscribe.New(log, servicePB))
 
 	// TODO: Метод на пост и оповещение об этом подписчиков
+	router.Post("/post", post.New(log, cfg.Bucket, cfg.Secret, servicePB, awsService))
 
 	// TODO: Метод на вывод всех постов
 
@@ -71,7 +78,7 @@ func main() {
 	// TODO: Метод на удаление поста(опцианально)
 
 	//router.Post("/", post.New(log, storage))
-	router.Post("/", post.New(log))
+	//router.Post("/", post.New(log))
 	//
 	//router.Get("/email={email}&pass_hash={pass_hash}", login.New(log, storage, cfg.Secret, cfg.TokenTTL))
 

@@ -1,5 +1,6 @@
 env: "prod"
 secret: "my-32-character-ultra-secure-and-ultra-long-secret"
+bucket: "my-pastbin-bucket"
 http_server:
   address: "0.0.0.0:8083"
   timeout: 4s
@@ -9,5 +10,5 @@ db:
   password: "postgres"
   host: "localhost"
   port: "5432"
-  dbname: "posts_pastbin_db"
+  dbname: "users_pastbin_db"
   sslmode: "disable"
