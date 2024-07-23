@@ -81,3 +81,20 @@ func (s *Storage) PostSaveDB(ctx context.Context, user models.PostUser) (int64, 
 
 	return int64(id), tx.Commit()
 }
+
+func (s *Storage) GetByIdDB(ctx context.Context, id int) (models.PostUser, error) {
+	const op = "Storage/postgres/User"
+
+	var user models.PostUser
+
+	createListQuery := fmt.Sprintf("SELECT users_posts.email, users_posts.bucket, users_posts.key FROM users_posts WHERE id = $1")
+
+	row := s.db.QueryRow(createListQuery, id)
+
+	err := row.Scan(&user.Email, &user.Bucket, &user.Key)
+	if err != nil {
+		return models.PostUser{}, fmt.Errorf("%s: %w", op, err)
+	}
+
+	return user, nil
+}

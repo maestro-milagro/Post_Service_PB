@@ -30,10 +30,6 @@ type CloudUploader interface {
 	UploadFile(bucketName string, fileName string, largeObject []byte) error
 }
 
-type CloudDownloader interface {
-	DownloadFile(bucketName string, filename string) ([]byte, error)
-}
-
 func New(log *slog.Logger,
 	bucket string,
 	secret string,

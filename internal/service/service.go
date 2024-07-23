@@ -8,6 +8,7 @@ import (
 	"github.com/maestro-milagro/Post_Service_PB/internal/models"
 	"github.com/maestro-milagro/Post_Service_PB/internal/storage"
 	"log/slog"
+	"strconv"
 )
 
 var (
@@ -20,13 +21,15 @@ type Service struct {
 	log          *slog.Logger
 	dbSubscriber DBSubscriber
 	dbPostSaver  DBPostSaver
+	dbByIDGetter DBByIDGetter
 }
 
-func New(log *slog.Logger, dbSubscriber DBSubscriber, dbPostSaver DBPostSaver) *Service {
+func New(log *slog.Logger, dbSubscriber DBSubscriber, dbPostSaver DBPostSaver, dbByIDGetter DBByIDGetter) *Service {
 	return &Service{
 		log:          log,
 		dbSubscriber: dbSubscriber,
 		dbPostSaver:  dbPostSaver,
+		dbByIDGetter: dbByIDGetter,
 	}
 }
 
@@ -36,6 +39,10 @@ type DBSubscriber interface {
 
 type DBPostSaver interface {
 	PostSaveDB(ctx context.Context, user models.PostUser) (int64, error)
+}
+
+type DBByIDGetter interface {
+	GetByIdDB(ctx context.Context, id int) (models.PostUser, error)
 }
 
 func (s *Service) Subscribe(ctx context.Context, uid int, subId int) error {
@@ -78,4 +85,23 @@ func (s *Service) SavePost(ctx context.Context, user models.PostUser) (int64, er
 		return 0, fmt.Errorf("%s: %w", op, err)
 	}
 	return id, nil
+}
+
+func (s *Service) GetById(ctx context.Context, id int) (models.PostUser, error) {
+	const op = "service.GetById"
+
+	log := s.log.With(
+		slog.String("op", op),
+		slog.String("user_id", strconv.Itoa(id)),
+	)
+
+	log.Info("getting by id")
+
+	userPost, err := s.dbByIDGetter.GetByIdDB(ctx, id)
+	if err != nil {
+		log.Error("error while getting by id", sl.Err(err))
+
+		return models.PostUser{}, fmt.Errorf("%s: %w", op, err)
+	}
+	return userPost, nil
 }
