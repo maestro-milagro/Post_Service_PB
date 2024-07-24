@@ -64,7 +64,7 @@ func (s *Storage) SubscribeDB(ctx context.Context, uid int, subId int) error {
 }
 
 func (s *Storage) PostSaveDB(ctx context.Context, user models.PostUser) (int64, error) {
-	const op = "Storage/postgres/SaveUser"
+	const op = "Storage/postgres/PostSaveDB"
 
 	tx, err := s.db.Begin()
 	if err != nil {
@@ -83,7 +83,7 @@ func (s *Storage) PostSaveDB(ctx context.Context, user models.PostUser) (int64, 
 }
 
 func (s *Storage) GetByIdDB(ctx context.Context, id int) (models.PostUser, error) {
-	const op = "Storage/postgres/User"
+	const op = "Storage/postgres/GetByIdDB"
 
 	var user models.PostUser
 
@@ -97,4 +97,18 @@ func (s *Storage) GetByIdDB(ctx context.Context, id int) (models.PostUser, error
 	}
 
 	return user, nil
+}
+
+func (s *Storage) GetAllDB(ctx context.Context) ([]models.PostUser, error) {
+	const op = "Storage/postgres/GetAllDB"
+
+	var users []models.PostUser
+
+	createListQuery := fmt.Sprintf("SELECT users_posts.id, users_posts.email, users_posts.bucket, users_posts.key FROM users_posts")
+
+	if err := s.db.Select(&users, createListQuery); err != nil {
+		return nil, fmt.Errorf("%s: %w", op, err)
+	}
+
+	return users, nil
 }

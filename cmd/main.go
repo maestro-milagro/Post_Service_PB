@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/go-chi/chi/v5"
 	"github.com/maestro-milagro/Post_Service_PB/internal/config"
+	"github.com/maestro-milagro/Post_Service_PB/internal/http-server/handlers/get_all"
 	"github.com/maestro-milagro/Post_Service_PB/internal/http-server/handlers/get_id"
 	"github.com/maestro-milagro/Post_Service_PB/internal/http-server/handlers/post"
 	"github.com/maestro-milagro/Post_Service_PB/internal/http-server/handlers/subscribe"
@@ -62,7 +63,7 @@ func main() {
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.URLFormat)
 
-	servicePB := service.New(log, storage, storage, storage)
+	servicePB := service.New(log, storage, storage, storage, storage)
 
 	awsService := aws.New(log)
 
@@ -73,9 +74,11 @@ func main() {
 	router.Post("/post", post.New(log, cfg.Bucket, cfg.Secret, servicePB, awsService))
 
 	// TODO: Метод на вывод всех постов
+	router.Post("/get_all", get_all.New(log, cfg.Secret, servicePB))
 
 	// TODO: Метод на вывод определенного поста
 	router.Post("/get_id/id={id}", get_id.New(log, cfg.Secret, cfg.Bucket, awsService, servicePB))
+
 	// TODO: Метод на удаление поста(опцианально)
 
 	//router.Post("/", post.New(log, storage))

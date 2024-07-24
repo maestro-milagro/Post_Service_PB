@@ -22,14 +22,16 @@ type Service struct {
 	dbSubscriber DBSubscriber
 	dbPostSaver  DBPostSaver
 	dbByIDGetter DBByIDGetter
+	dbAllGetter  DBAllGetter
 }
 
-func New(log *slog.Logger, dbSubscriber DBSubscriber, dbPostSaver DBPostSaver, dbByIDGetter DBByIDGetter) *Service {
+func New(log *slog.Logger, dbSubscriber DBSubscriber, dbPostSaver DBPostSaver, dbByIDGetter DBByIDGetter, dbAllGetter DBAllGetter) *Service {
 	return &Service{
 		log:          log,
 		dbSubscriber: dbSubscriber,
 		dbPostSaver:  dbPostSaver,
 		dbByIDGetter: dbByIDGetter,
+		dbAllGetter:  dbAllGetter,
 	}
 }
 
@@ -43,6 +45,10 @@ type DBPostSaver interface {
 
 type DBByIDGetter interface {
 	GetByIdDB(ctx context.Context, id int) (models.PostUser, error)
+}
+
+type DBAllGetter interface {
+	GetAllDB(ctx context.Context) ([]models.PostUser, error)
 }
 
 func (s *Service) Subscribe(ctx context.Context, uid int, subId int) error {
@@ -102,6 +108,24 @@ func (s *Service) GetById(ctx context.Context, id int) (models.PostUser, error) 
 		log.Error("error while getting by id", sl.Err(err))
 
 		return models.PostUser{}, fmt.Errorf("%s: %w", op, err)
+	}
+	return userPost, nil
+}
+
+func (s *Service) GetAll(ctx context.Context) ([]models.PostUser, error) {
+	const op = "service.GetAll"
+
+	log := s.log.With(
+		slog.String("op", op),
+	)
+
+	log.Info("getting all")
+
+	userPost, err := s.dbAllGetter.GetAllDB(ctx)
+	if err != nil {
+		log.Error("error while getting all", sl.Err(err))
+
+		return []models.PostUser{}, fmt.Errorf("%s: %w", op, err)
 	}
 	return userPost, nil
 }

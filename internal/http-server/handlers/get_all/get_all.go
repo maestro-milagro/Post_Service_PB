@@ -1,9 +1,9 @@
-package get_id
+package get_all
 
 import (
 	"context"
 	"errors"
-	"github.com/go-chi/chi/v5"
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/render"
 	"github.com/maestro-milagro/Post_Service_PB/internal/lib/jwt"
@@ -13,7 +13,6 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
-	"strconv"
 )
 
 type Request struct {
@@ -21,24 +20,21 @@ type Request struct {
 }
 
 type Response struct {
-	FileName string `json:"file_name"`
-	File     []byte `json:"file"`
+	UsersInfo []models.PostUser `json:"users_info"`
 	models.Response
 }
 
-type ByIDGetter interface {
-	GetById(ctx context.Context, id int) (models.PostUser, error)
+type AllGetter interface {
+	GetAll(ctx context.Context) ([]models.PostUser, error)
 }
 
-type CloudDownloader interface {
-	DownloadFile(bucketName string, filename string) ([]byte, error)
+type CloudListDownloader interface {
+	DownloadList(bucketName string) ([]types.Object, error)
 }
 
 func New(log *slog.Logger,
 	secret string,
-	bucketName string,
-	cloud CloudDownloader,
-	byIDGetter ByIDGetter,
+	byIDGetter AllGetter,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const op = "handlers.get_id.New"
@@ -70,22 +66,7 @@ func New(log *slog.Logger,
 
 			return
 		}
-
-		id := chi.URLParam(r, "id")
-		if id == "" {
-			log.Info("id is empty")
-
-			render.Status(r, http.StatusBadRequest)
-
-			render.JSON(w, r, models.Error("invalid request"))
-
-			return
-		}
-		newId, err := strconv.Atoi(id)
-		if err != nil {
-			log.Error("failed to parse id", sl.Err(err))
-		}
-		userPost, err := byIDGetter.GetById(r.Context(), newId)
+		userPost, err := byIDGetter.GetAll(r.Context())
 		if err != nil {
 			if errors.Is(err, storage.ErrUserNotFound) {
 				log.Warn("user not found", sl.Err(err))
@@ -106,21 +87,20 @@ func New(log *slog.Logger,
 		}
 
 		// TODO: aws download
-		file, err := cloud.DownloadFile(bucketName, userPost.Key)
-		if err != nil {
-			log.Error("failed to download file", sl.Err(err))
-
-			render.Status(r, http.StatusInternalServerError)
-
-			render.JSON(w, r, models.Error("failed to download file"))
-
-			return
-		}
+		//file, err := cloud.DownloadList(bucketName)
+		//if err != nil {
+		//	log.Error("failed to download file", sl.Err(err))
+		//
+		//	render.Status(r, http.StatusInternalServerError)
+		//
+		//	render.JSON(w, r, models.Error("failed to download file"))
+		//
+		//	return
+		//}
 
 		render.JSON(w, r, Response{
-			FileName: userPost.Key,
-			File:     file,
-			Response: models.OK(),
+			UsersInfo: userPost,
+			Response:  models.OK(),
 		})
 	}
 }

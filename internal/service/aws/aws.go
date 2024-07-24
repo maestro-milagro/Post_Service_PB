@@ -8,6 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/maestro-milagro/Post_Service_PB/internal/lib/sl"
 	"log"
 	"log/slog"
@@ -103,4 +104,17 @@ func (a *AwsService) DownloadFile(bucketName string, filename string) ([]byte, e
 			bucketName, filename, err)
 	}
 	return buffer.Bytes(), err
+}
+
+func (a *AwsService) DownloadList(bucketName string) ([]types.Object, error) {
+	result, err := a.Client.ListObjectsV2(context.TODO(), &s3.ListObjectsV2Input{
+		Bucket: aws.String(bucketName),
+	})
+	var contents []types.Object
+	if err != nil {
+		log.Printf("Couldn't list objects in bucket %v. Here's why: %v\n", bucketName, err)
+	} else {
+		contents = result.Contents
+	}
+	return contents, err
 }

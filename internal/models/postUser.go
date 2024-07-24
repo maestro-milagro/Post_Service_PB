@@ -1,8 +1,8 @@
 package models
 
 type PostUser struct {
-	Email string `json:"email"`
-	// TODO: Может измениться
+	ID     int64  `json:"id"`
+	Email  string `json:"email"`
 	Bucket string `json:"bucket"`
 	Key    string `json:"key"`
 }
