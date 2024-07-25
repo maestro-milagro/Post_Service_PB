@@ -10,7 +10,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/maestro-milagro/Post_Service_PB/internal/lib/sl"
-	"log"
 	"log/slog"
 )
 
@@ -100,7 +99,7 @@ func (a *AwsService) DownloadFile(bucketName string, filename string) ([]byte, e
 		Key:    aws.String(filename),
 	})
 	if err != nil {
-		log.Printf("Couldn't download large object from %v:%v. Here's why: %v\n",
+		a.log.Error("Couldn't download large object from %v:%v. Here's why: %v\n",
 			bucketName, filename, err)
 	}
 	return buffer.Bytes(), err
@@ -112,9 +111,26 @@ func (a *AwsService) DownloadList(bucketName string) ([]types.Object, error) {
 	})
 	var contents []types.Object
 	if err != nil {
-		log.Printf("Couldn't list objects in bucket %v. Here's why: %v\n", bucketName, err)
+		a.log.Error("Couldn't list objects in bucket %v. Here's why: %v\n", bucketName, err)
 	} else {
 		contents = result.Contents
 	}
 	return contents, err
+}
+
+func (a *AwsService) DeleteObjects(bucketName string, objectKeys []string) error {
+	var objectIds []types.ObjectIdentifier
+	for _, key := range objectKeys {
+		objectIds = append(objectIds, types.ObjectIdentifier{Key: aws.String(key)})
+	}
+	output, err := a.Client.DeleteObjects(context.TODO(), &s3.DeleteObjectsInput{
+		Bucket: aws.String(bucketName),
+		Delete: &types.Delete{Objects: objectIds},
+	})
+	if err != nil {
+		a.log.Error("Couldn't delete objects from bucket %v. Here's why: %v\n", bucketName, err)
+	} else {
+		a.log.Info("Deleted %v objects.\n", len(output.Deleted))
+	}
+	return err
 }

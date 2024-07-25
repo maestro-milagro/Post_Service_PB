@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/go-chi/chi/v5"
 	"github.com/maestro-milagro/Post_Service_PB/internal/config"
+	"github.com/maestro-milagro/Post_Service_PB/internal/http-server/handlers/delete"
 	"github.com/maestro-milagro/Post_Service_PB/internal/http-server/handlers/get_all"
 	"github.com/maestro-milagro/Post_Service_PB/internal/http-server/handlers/get_id"
 	"github.com/maestro-milagro/Post_Service_PB/internal/http-server/handlers/post"
@@ -11,6 +12,7 @@ import (
 	"github.com/maestro-milagro/Post_Service_PB/internal/lib/sl"
 	"github.com/maestro-milagro/Post_Service_PB/internal/service"
 	"github.com/maestro-milagro/Post_Service_PB/internal/service/aws"
+	"github.com/maestro-milagro/Post_Service_PB/internal/service/kafka"
 	"log/slog"
 	"net/http"
 	"os"
@@ -63,15 +65,24 @@ func main() {
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.URLFormat)
 
-	servicePB := service.New(log, storage, storage, storage, storage)
+	servicePB := service.New(log,
+		storage,
+		storage,
+		storage,
+		storage,
+		storage,
+		storage,
+	)
 
 	awsService := aws.New(log)
+
+	kafkaProd := kafka.New(log)
 
 	// TODO: Метод на подписку
 	router.Post("/subscribe", subscribe.New(log, servicePB))
 
 	// TODO: Метод на пост и оповещение об этом подписчиков
-	router.Post("/post", post.New(log, cfg.Bucket, cfg.Secret, servicePB, awsService))
+	router.Post("/post", post.New(log, cfg.Bucket, cfg.Secret, servicePB, awsService, kafkaProd, servicePB))
 
 	// TODO: Метод на вывод всех постов
 	router.Post("/get_all", get_all.New(log, cfg.Secret, servicePB))
@@ -80,6 +91,7 @@ func main() {
 	router.Post("/get_id/id={id}", get_id.New(log, cfg.Secret, cfg.Bucket, awsService, servicePB))
 
 	// TODO: Метод на удаление поста(опцианально)
+	router.Delete("/delete", delete.New(log, cfg.Secret, cfg.Bucket, awsService, servicePB))
 
 	//router.Post("/", post.New(log, storage))
 	//router.Post("/", post.New(log))

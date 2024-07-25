@@ -37,7 +37,7 @@ func New(log *slog.Logger,
 	byIDGetter AllGetter,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		const op = "handlers.get_id.New"
+		const op = "handlers.get_all.New"
 
 		log := log.With(
 			slog.String("op", op),
@@ -69,7 +69,7 @@ func New(log *slog.Logger,
 		userPost, err := byIDGetter.GetAll(r.Context())
 		if err != nil {
 			if errors.Is(err, storage.ErrUserNotFound) {
-				log.Warn("user not found", sl.Err(err))
+				log.Warn("users not found", sl.Err(err))
 
 				render.Status(r, http.StatusNotFound)
 
@@ -77,7 +77,7 @@ func New(log *slog.Logger,
 
 				return
 			}
-			log.Error("failed to get user", sl.Err(err))
+			log.Error("failed to get users", sl.Err(err))
 
 			render.Status(r, http.StatusInternalServerError)
 
@@ -85,18 +85,6 @@ func New(log *slog.Logger,
 
 			return
 		}
-
-		// TODO: aws download
-		//file, err := cloud.DownloadList(bucketName)
-		//if err != nil {
-		//	log.Error("failed to download file", sl.Err(err))
-		//
-		//	render.Status(r, http.StatusInternalServerError)
-		//
-		//	render.JSON(w, r, models.Error("failed to download file"))
-		//
-		//	return
-		//}
 
 		render.JSON(w, r, Response{
 			UsersInfo: userPost,

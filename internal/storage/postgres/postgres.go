@@ -14,6 +14,11 @@ type Storage struct {
 	db *sqlx.DB
 }
 
+func (s *Storage) HowSubbedDB(ctx context.Context, email string) ([]int, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
 type Config struct {
 	Host     string
 	Port     string
@@ -111,4 +116,28 @@ func (s *Storage) GetAllDB(ctx context.Context) ([]models.PostUser, error) {
 	}
 
 	return users, nil
+}
+
+func (s *Storage) DeleteDB(ctx context.Context, ids []int) ([]string, error) {
+	const op = "Storage/postgres/DeleteDB"
+
+	tx, err := s.db.Begin()
+	if err != nil {
+		return []string{}, fmt.Errorf("%s: %w", op, err)
+	}
+
+	keys := make([]string, 0, len(ids))
+	var key string
+
+	for _, id := range ids {
+		createListQuery := fmt.Sprintf("DELETE FROM users_posts WHERE id = $1 RETURNING key")
+		row := tx.QueryRow(createListQuery, id)
+		if err := row.Scan(&key); err != nil {
+			tx.Rollback()
+			return []string{}, fmt.Errorf("%s: %w", op, err)
+		}
+		keys = append(keys, key)
+	}
+
+	return keys, tx.Commit()
 }

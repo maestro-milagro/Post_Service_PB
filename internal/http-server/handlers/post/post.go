@@ -2,12 +2,14 @@ package post
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/render"
 	"github.com/maestro-milagro/Post_Service_PB/internal/lib/jwt"
 	"github.com/maestro-milagro/Post_Service_PB/internal/lib/sl"
 	"github.com/maestro-milagro/Post_Service_PB/internal/models"
+	"github.com/maestro-milagro/Post_Service_PB/internal/service"
 	"io"
 	"log/slog"
 	"net/http"
@@ -30,11 +32,21 @@ type CloudUploader interface {
 	UploadFile(bucketName string, fileName string, largeObject []byte) error
 }
 
+type Producer interface {
+	Produce(email string, subIds []int) error
+}
+
+type HowSubber interface {
+	HowSubbed(ctx context.Context, email string) ([]int, error)
+}
+
 func New(log *slog.Logger,
 	bucket string,
 	secret string,
 	postUserSaver PostUserSaver,
 	uploader CloudUploader,
+	producer Producer,
+	howSubber HowSubber,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const op = "handlers.save.New"
@@ -130,7 +142,32 @@ func New(log *slog.Logger,
 			render.JSON(w, r, models.Error("failed to save post"))
 		}
 
-		// TODO: id is given to notification service
+		subbs, err := howSubber.HowSubbed(r.Context(), email)
+		if err != nil {
+			if errors.Is(err, service.ErrNoFollowers) {
+				log.Info("No one is following this user", sl.Err(err))
+
+				render.JSON(w, r, Response{
+					Id:       int(id),
+					Response: models.OK(),
+				})
+			}
+			log.Error("err while searching followers", sl.Err(err))
+
+			render.Status(r, http.StatusInternalServerError)
+
+			render.JSON(w, r, models.Error("err while searching followers"))
+		}
+
+		// TODO: notification service
+		err = producer.Produce(email, subbs)
+		if err != nil {
+			log.Error("err while producing to kafka", sl.Err(err))
+
+			render.Status(r, http.StatusInternalServerError)
+
+			render.JSON(w, r, models.Error("err while producing to kafka"))
+		}
 
 		render.JSON(w, r, Response{
 			Id:       int(id),

@@ -14,7 +14,7 @@ import (
 var (
 	ErrInvalidCredentials = errors.New("invalid credentials")
 	ErrSubscriptionExist  = errors.New("subscription already exists")
-	ErrUserNotFound       = errors.New("user not found")
+	ErrNoFollowers        = errors.New("no followers found")
 )
 
 type Service struct {
@@ -23,15 +23,25 @@ type Service struct {
 	dbPostSaver  DBPostSaver
 	dbByIDGetter DBByIDGetter
 	dbAllGetter  DBAllGetter
+	dbDeleter    DBDeleter
+	dbHowSubbed  DBHowSubbed
 }
 
-func New(log *slog.Logger, dbSubscriber DBSubscriber, dbPostSaver DBPostSaver, dbByIDGetter DBByIDGetter, dbAllGetter DBAllGetter) *Service {
+func New(log *slog.Logger,
+	dbSubscriber DBSubscriber,
+	dbPostSaver DBPostSaver,
+	dbByIDGetter DBByIDGetter,
+	dbAllGetter DBAllGetter,
+	dbDeleter DBDeleter,
+	dbHowSubbed DBHowSubbed) *Service {
 	return &Service{
 		log:          log,
 		dbSubscriber: dbSubscriber,
 		dbPostSaver:  dbPostSaver,
 		dbByIDGetter: dbByIDGetter,
 		dbAllGetter:  dbAllGetter,
+		dbDeleter:    dbDeleter,
+		dbHowSubbed:  dbHowSubbed,
 	}
 }
 
@@ -49,6 +59,14 @@ type DBByIDGetter interface {
 
 type DBAllGetter interface {
 	GetAllDB(ctx context.Context) ([]models.PostUser, error)
+}
+
+type DBDeleter interface {
+	DeleteDB(ctx context.Context, ids []int) ([]string, error)
+}
+
+type DBHowSubbed interface {
+	HowSubbedDB(ctx context.Context, email string) ([]int, error)
 }
 
 func (s *Service) Subscribe(ctx context.Context, uid int, subId int) error {
@@ -128,4 +146,45 @@ func (s *Service) GetAll(ctx context.Context) ([]models.PostUser, error) {
 		return []models.PostUser{}, fmt.Errorf("%s: %w", op, err)
 	}
 	return userPost, nil
+}
+
+func (s *Service) Delete(ctx context.Context, ids []int) ([]string, error) {
+	const op = "service.GetById"
+
+	log := s.log.With(
+		slog.String("op", op),
+	)
+
+	log.Info("deleting by id")
+
+	delObjects, err := s.dbDeleter.DeleteDB(ctx, ids)
+	if err != nil {
+		log.Error("error while getting by id", sl.Err(err))
+
+		return []string{}, fmt.Errorf("%s: %w", op, err)
+	}
+	return delObjects, nil
+}
+
+func (s *Service) HowSubbed(ctx context.Context, email string) ([]int, error) {
+	const op = "service.HowSubbedDB"
+
+	log := s.log.With(
+		slog.String("op", op),
+	)
+
+	log.Info("searching for subbs")
+
+	subbs, err := s.dbHowSubbed.HowSubbedDB(ctx, email)
+	if err != nil {
+		if errors.Is(err, storage.ErrNoFollowers) {
+			log.Error("no followers were found", sl.Err(err))
+
+			return []int{}, ErrNoFollowers
+		}
+		log.Error("error while searching for subbs", sl.Err(err))
+
+		return []int{}, fmt.Errorf("%s: %w", op, err)
+	}
+	return subbs, nil
 }
