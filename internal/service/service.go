@@ -24,7 +24,7 @@ type Service struct {
 	dbByIDGetter DBByIDGetter
 	dbAllGetter  DBAllGetter
 	dbDeleter    DBDeleter
-	dbHowSubbed  DBHowSubbed
+	dbWhoSubbed  DBWhoSubbed
 }
 
 func New(log *slog.Logger,
@@ -33,7 +33,7 @@ func New(log *slog.Logger,
 	dbByIDGetter DBByIDGetter,
 	dbAllGetter DBAllGetter,
 	dbDeleter DBDeleter,
-	dbHowSubbed DBHowSubbed) *Service {
+	dbWhoSubbed DBWhoSubbed) *Service {
 	return &Service{
 		log:          log,
 		dbSubscriber: dbSubscriber,
@@ -41,7 +41,7 @@ func New(log *slog.Logger,
 		dbByIDGetter: dbByIDGetter,
 		dbAllGetter:  dbAllGetter,
 		dbDeleter:    dbDeleter,
-		dbHowSubbed:  dbHowSubbed,
+		dbWhoSubbed:  dbWhoSubbed,
 	}
 }
 
@@ -65,8 +65,8 @@ type DBDeleter interface {
 	DeleteDB(ctx context.Context, ids []int) ([]string, error)
 }
 
-type DBHowSubbed interface {
-	HowSubbedDB(ctx context.Context, email string) ([]int, error)
+type DBWhoSubbed interface {
+	WhoSubbedDB(ctx context.Context, email string) ([]int, error)
 }
 
 func (s *Service) Subscribe(ctx context.Context, uid int, subId int) error {
@@ -166,8 +166,8 @@ func (s *Service) Delete(ctx context.Context, ids []int) ([]string, error) {
 	return delObjects, nil
 }
 
-func (s *Service) HowSubbed(ctx context.Context, email string) ([]int, error) {
-	const op = "service.HowSubbedDB"
+func (s *Service) WhoSubbed(ctx context.Context, email string) ([]int, error) {
+	const op = "service.WhoSubbedDB"
 
 	log := s.log.With(
 		slog.String("op", op),
@@ -175,7 +175,7 @@ func (s *Service) HowSubbed(ctx context.Context, email string) ([]int, error) {
 
 	log.Info("searching for subbs")
 
-	subbs, err := s.dbHowSubbed.HowSubbedDB(ctx, email)
+	subbs, err := s.dbWhoSubbed.WhoSubbedDB(ctx, email)
 	if err != nil {
 		if errors.Is(err, storage.ErrNoFollowers) {
 			log.Error("no followers were found", sl.Err(err))

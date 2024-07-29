@@ -8,11 +8,12 @@ import (
 )
 
 type Config struct {
-	Env        string `yaml:"env" env-default:"local"`
-	Secret     string `yaml:"secret"`
-	Bucket     string `yaml:"bucket"`
-	DB         `yaml:"db"`
-	HTTPServer `yaml:"http_server"`
+	Env                  string `yaml:"env" env-default:"local"`
+	Secret               string `yaml:"secret"`
+	Bucket               string `yaml:"bucket"`
+	KafkaBootstrapServer string `yaml:"kafka_bootstrap_server" env-default:"localhost:9095"`
+	DB                   `yaml:"db"`
+	HTTPServer           `yaml:"http_server"`
 }
 
 type HTTPServer struct {

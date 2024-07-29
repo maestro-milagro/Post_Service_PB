@@ -1,65 +1,63 @@
 package kafka
 
 import (
-	"fmt"
-	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
+	"encoding/json"
+	"github.com/IBM/sarama"
+	"github.com/maestro-milagro/Post_Service_PB/internal/models"
+	"log"
 	"log/slog"
-	"os"
-	"strconv"
-	"strings"
 )
 
 type KafkaProducer struct {
 	log      *slog.Logger
-	producer *kafka.Producer
+	producer sarama.AsyncProducer
 }
 
-func New(log *slog.Logger) *KafkaProducer {
-	p, err := kafka.NewProducer(&kafka.ConfigMap{
-		// User-specific properties that you must set
-		"bootstrap.servers": "localhost:8082",
-
-		// Fixed properties
-		"acks": "all"})
-
+func New(log *slog.Logger, brokers []string) *KafkaProducer {
+	config := sarama.NewConfig()
+	config.Producer.Partitioner = sarama.NewRandomPartitioner
+	config.Producer.RequiredAcks = sarama.WaitForAll
+	config.Producer.Return.Successes = true
+	producer, err := sarama.NewAsyncProducer(brokers, config)
 	if err != nil {
-		fmt.Printf("Failed to create producer: %s", err)
-		os.Exit(1)
+		panic(err)
 	}
 	return &KafkaProducer{
 		log:      log,
-		producer: p,
+		producer: producer,
 	}
 }
 
-func (kf *KafkaProducer) Produce(email string, subIds []int) error {
+func prepareMessage(topic string, message []byte) *sarama.ProducerMessage {
+	msg := &sarama.ProducerMessage{
+		Topic:     topic,
+		Partition: -1,
+		Value:     sarama.ByteEncoder(message),
+	}
+	return msg
+}
+
+func (kf *KafkaProducer) Produce(post models.Post, topic string) {
 	go func() {
-		for e := range kf.producer.Events() {
-			switch ev := e.(type) {
-			case *kafka.Message:
-				if ev.TopicPartition.Error != nil {
-					fmt.Printf("Failed to deliver message: %v\n", ev.TopicPartition)
-				} else {
-					fmt.Printf("Produced event to topic %s: key = %-10s value = %s\n",
-						*ev.TopicPartition.Topic, string(ev.Key), string(ev.Value))
-				}
-			}
+		for err := range kf.producer.Errors() {
+			kf.log.Error("async producer error:", err.Err)
 		}
 	}()
-	topic := "posts"
-	var strIds string
-	for _, id := range subIds {
-		strIds += strconv.Itoa(id) + ","
+
+	go func() {
+		for succ := range kf.producer.Successes() {
+			kf.log.Info("async producer success:", succ)
+		}
+	}()
+
+	postJson, err := json.Marshal(post)
+	if err != nil {
+		log.Fatal(err)
 	}
-	strIds = strings.Trim(strIds, ",")
 
-	kf.producer.Produce(&kafka.Message{
-		TopicPartition: kafka.TopicPartition{Topic: &topic, Partition: kafka.PartitionAny},
-		Key:            []byte(email),
-		Value:          []byte(strIds),
-	}, nil)
+	msg := prepareMessage(topic, postJson)
 
-	// Wait for all messages to be delivered
-	kf.producer.Flush(15 * 1000)
-	kf.producer.Close()
+	kf.producer.Input() <- msg
+
+	kf.log.Info("post sent %v: ", post.PostID)
 }

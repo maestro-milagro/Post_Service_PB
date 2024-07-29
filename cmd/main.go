@@ -76,13 +76,19 @@ func main() {
 
 	awsService := aws.New(log)
 
-	kafkaProd := kafka.New(log)
+	kafkaProd := kafka.New(log, []string{cfg.KafkaBootstrapServer})
 
 	// TODO: Метод на подписку
 	router.Post("/subscribe", subscribe.New(log, servicePB))
 
 	// TODO: Метод на пост и оповещение об этом подписчиков
-	router.Post("/post", post.New(log, cfg.Bucket, cfg.Secret, servicePB, awsService, kafkaProd, servicePB))
+	router.Post("/post", post.New(log,
+		cfg.Bucket,
+		cfg.Secret,
+		servicePB,
+		awsService,
+		kafkaProd,
+	))
 
 	// TODO: Метод на вывод всех постов
 	router.Post("/get_all", get_all.New(log, cfg.Secret, servicePB))
@@ -133,7 +139,6 @@ func main() {
 	}
 
 	// TODO: close storage
-
 	log.Info("server stopped")
 }
 func setupLogger(env string) *slog.Logger {

@@ -14,11 +14,6 @@ type Storage struct {
 	db *sqlx.DB
 }
 
-func (s *Storage) HowSubbedDB(ctx context.Context, email string) ([]int, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
 type Config struct {
 	Host     string
 	Port     string
@@ -140,4 +135,18 @@ func (s *Storage) DeleteDB(ctx context.Context, ids []int) ([]string, error) {
 	}
 
 	return keys, tx.Commit()
+}
+
+func (s *Storage) WhoSubbedDB(ctx context.Context, email string) ([]int, error) {
+	const op = "Storage/postgres/WhoSubbedDB"
+
+	var subs []int
+
+	createListQuery := fmt.Sprintf("SELECT s.sub_id FROM subscriptions AS s LEFT JOIN users AS u ON s.uid = u.id WHERE u.email = $1")
+
+	if err := s.db.Select(&subs, createListQuery, email); err != nil {
+		return nil, fmt.Errorf("%s: %w", op, err)
+	}
+
+	return subs, nil
 }
