@@ -12,9 +12,9 @@ import (
 )
 
 var (
-	ErrInvalidCredentials = errors.New("invalid credentials")
-	ErrSubscriptionExist  = errors.New("subscription already exists")
-	ErrNoFollowers        = errors.New("no followers found")
+	ErrUserNotFound      = errors.New("no users found")
+	ErrSubscriptionExist = errors.New("subscription already exists")
+	ErrNoFollowers       = errors.New("no followers found")
 )
 
 type Service struct {
@@ -144,6 +144,9 @@ func (s *Service) GetAll(ctx context.Context) ([]models.PostUser, error) {
 		log.Error("error while getting all", sl.Err(err))
 
 		return []models.PostUser{}, fmt.Errorf("%s: %w", op, err)
+	}
+	if len(userPost) == 0 {
+		return []models.PostUser{}, fmt.Errorf("%s: %w", op, ErrNoFollowers)
 	}
 	return userPost, nil
 }

@@ -9,7 +9,7 @@ import (
 	"github.com/maestro-milagro/Post_Service_PB/internal/lib/jwt"
 	"github.com/maestro-milagro/Post_Service_PB/internal/lib/sl"
 	"github.com/maestro-milagro/Post_Service_PB/internal/models"
-	"github.com/maestro-milagro/Post_Service_PB/internal/storage"
+	"github.com/maestro-milagro/Post_Service_PB/internal/service"
 	"io"
 	"log/slog"
 	"net/http"
@@ -68,7 +68,7 @@ func New(log *slog.Logger,
 		}
 		userPost, err := byIDGetter.GetAll(r.Context())
 		if err != nil {
-			if errors.Is(err, storage.ErrUserNotFound) {
+			if errors.Is(err, service.ErrUserNotFound) {
 				log.Warn("users not found", sl.Err(err))
 
 				render.Status(r, http.StatusNotFound)
