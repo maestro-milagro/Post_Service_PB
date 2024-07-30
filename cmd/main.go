@@ -91,10 +91,10 @@ func main() {
 	))
 
 	// TODO: Метод на вывод всех постов
-	router.Post("/get_all", get_all.New(log, cfg.Secret, servicePB))
+	router.Get("/get_all", get_all.New(log, cfg.Secret, servicePB))
 
 	// TODO: Метод на вывод определенного поста
-	router.Post("/get_id/id={id}", get_id.New(log, cfg.Secret, cfg.Bucket, awsService, servicePB))
+	router.Get("/get_id/id={id}", get_id.New(log, cfg.Secret, cfg.Bucket, awsService, servicePB))
 
 	// TODO: Метод на удаление поста(опцианально)
 	router.Delete("/delete", delete.New(log, cfg.Secret, cfg.Bucket, awsService, servicePB))
